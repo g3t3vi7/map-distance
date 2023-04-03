@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/map")
@@ -22,7 +25,7 @@ public class MapController {
     private final MapService service;
     private final ModelMapper modelMapper;
 
-    @GetMapping("/{location}/{destination}")
+    @GetMapping("calc/{location}/{destination}")
     public ResponseEntity<?> getDistance(
             @PathVariable("location") String location,
             @PathVariable("destination") String destination) {
@@ -43,10 +46,31 @@ public class MapController {
     @PutMapping
     public ResponseEntity updatePostcode(@RequestBody PostcodeDetail postcodeDetail) {
         PostCodeLatLng postCodeLatLng = modelMapper.map(postcodeDetail, PostCodeLatLng.class);
-        return ResponseEntity.ok(service.updatePostcode(postCodeLatLng));
+        if(service.updatePostcode(postCodeLatLng) < 1) {
+            return new ResponseEntity<>("Failed to update", HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(postcodeDetail, HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping
+    public ResponseEntity<?> getAllPostcodes() {
+
+        List<PostcodeDetail> postcodeDetails = service.getAll().stream()
+                .map(p -> modelMapper.map(p, PostcodeDetail.class))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(postcodeDetails, HttpStatus.OK);
+    }
+
+    @GetMapping("/{postcode}")
+    public ResponseEntity<?> getPostcode(
+            @PathVariable("postcode") String postcode) {
+        return new ResponseEntity<>(
+                modelMapper.map(service.getPostcode(postcode), PostcodeDetail.class), HttpStatus.OK);
+    }
+
+    @GetMapping("/testapi")
     public ResponseEntity<?> testAPI() {
         logger.info("hit!");
         return new ResponseEntity<>("Completed", HttpStatus.OK);
